@@ -4,7 +4,7 @@ Aluno: Kayo Renato
 Data: 3/14/2021
 output:
     html_document:
-        highlight: textmate
+        #highlight: textmate
         number_sections: yes 
         toc: yes
         toc_float:
