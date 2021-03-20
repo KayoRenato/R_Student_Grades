@@ -1,0 +1,6 @@
+---
+title: "Atividade_02"
+author: "Kayo Renato"
+date: "3/14/2021"
+output: html_document
+---

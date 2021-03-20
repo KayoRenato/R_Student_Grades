@@ -1,0 +1,423 @@
+---
+title: "Atividade 02 - Regressão Linear Múltipla"
+Aluno: Kayo Renato
+Data: 3/14/2021
+output:
+    html_document:
+        highlight: textmate
+        number_sections: yes 
+        toc: yes
+        toc_float:
+            collapsed: yes
+            smooth_scroll: yes
+    pdf_document: default
+  
+---
+
+**Professora:** Roberta Andrade  
+**Disciplina:** Estatística Computacional    
+**Aluno:** Kayo Renato  
+
+A base[^1] utilizada para o estudo foi extraída do *UC Irvine Machine Learning Repository* [^2].
+
+[^1]: [Base de Dados - performance de Estudantes](https://archive.ics.uci.edu/ml/datasets/Student+Performance)
+[^2]: [Repositório da UC Irvine Machine Learnig](https://archive.ics.uci.edu/ml/index.php)
+
+# O problema de regressão e suas variáveis
+
+```{r pacotes , include=FALSE}
+if(!require(pacman)) install.packages("pacman")
+library(pacman)
+
+pacman::p_load(dplyr, car, rstatix, lmtest, ggpubr,QuantPsyc, psych,
+               glue, scatterplot3d, yaml, stringi, caret, knitr, rmarkdown, 
+               tinytex, pdfcrop, ghostcript, LaTeX)
+```
+
+
+```{r Carregamento de Banco de Dados, include=FALSE}
+setwd('/Users/kayorenato/Downloads/Dataset_Student')
+
+df_student_por = read.csv2("df_Student_Por_ETL.csv",sep=";",header=TRUE)
+
+df_student_mat = read.csv2("df_Student_Mat_ETL.csv",sep=";",header=TRUE)
+
+df_student = rbind(df_student_por,df_student_mat)
+
+df = df_student
+```
+
+**Informações do conjunto de dados:**  
+  Estes dados abordam o aproveitamento dos alunos do ensino secundário de duas 
+  escolas portuguesas. Os atributos de dados incluem notas dos alunos, 
+  características demográficas, sociais e relacionadas à escola e foram 
+  coletados por meio de relatórios e questionários escolares. 
+<br>
+
+  São fornecidos dois conjuntos de dados relativos ao desempenho em duas 
+  disciplinas distintas: Matemática (mat) e Língua Portuguesa (por).  
+<br>
+**Informação de Atributo:**  
+  Atributos para os conjuntos de dados student-mat.csv (curso de matemática) 
+  e student-por.csv (curso de língua portuguesa).  
+  <br>
+
+## Variáveis   
+### Variáveis Independetes   
+
+  1. Idade (*age*) - Idade do aluno (Quantitativa Discreta: {15 ~ 22});  
+  2. Reprovações(*failures*) - Número de reprovações anteriores nas aulas (Quantitativa Discreta: {0 ~ 3});  
+  3. Faltas (*absences*) - Número de faltas escolares (Quantitativa Discreta: {0 ~ 93}).  
+<br>
+
+### Variáveis Dependete   
+
+  4. Nota (*G3*) - Nota Final do Aluno (numérico - Quantitativa Discreta: {0 ~ 20} - meta de saída).  
+<br>
+
+Tentaremos identificar a existência de uma correlação linear entre as variáveis independentes apresentadas e a variával dependente **Nota**. E depois, identificar qual as variáveis melhor representa essa regressão (*simples ou múltipla*).
+
+
+## Base de Dados
+A base apresenta uma dimesão de `r dim(df)[1]` linhas por `r dim(df)[2]` colunas.  
+<br>
+```{r Visualização da Base, echo=FALSE}
+paged_table(df)
+```
+<br>
+
+# Estatísticas Descritivas
+
+**Sumário da Tabela**
+```{r Estatística Descritiva, echo=FALSE}
+dep = 'G3'
+nameDep = 'Nota'
+summary(df)
+  
+``` 
+<br>
+**Unidades da Tabela**
+```{r, echo=FALSE}
+str(df)
+```
+<br>
+
+## Analisando as variáveis
+### Notas
+Tendo a Variância sendo, $var (x) = \sigma^2=\sum \frac{(x_{i}-\bar{x})^2}{n}$, o Desvio Padrão $\sigma =\sqrt {\sum \frac{(x_{i}-\bar{x})^2}{n}}$ e Coeficiente de Variação como $cv = \frac{\sigma}{\mu}(\%)$ (%), onde $\mu$ é a média.
+
+**Variância**  
+```{r Variancia - Nota, echo=FALSE}
+vari = round(var(df$G3), digits = 3)
+glue('Variância das Notas: {vari}')
+
+```
+<br>  
+
+**Desvio Padrão**  
+```{r Desvio - Nota, echo=FALSE}
+desv = round(sd(df$G3), digits = 3)
+glue('Desvio Padrão das Notas: {desv}')
+
+```
+<br>  
+
+**Coeficiente de Variação**  
+```{r CV - Nota, echo=FALSE}
+cv = round(sd(df$G3)/mean(df$G3)*100, digits = 2)
+glue('Coeficiente de Variação das Notas: {cv} %')
+
+```
+<br>  
+
+A mediana das notas dos alunos apresentam um medida de tendência central inferior a média, bem próxima ao 1º quartil.  
+
+````{r Gráfico BoxPlot - Nota, echo=FALSE}
+boxplot(df$G3, main=glue('BoxPlot - {nameDep}'), xlab = 'Aluno', 
+        ylab = nameDep)
+```
+
+
+### Idade {.tabset .tabset-fade}
+
+**Variância**  
+```{r Variancia - Idade, echo=FALSE}
+vari = round(var(df$age), digits = 3)
+glue('Variância das Idades: {vari}')
+
+```
+<br>  
+
+**Desvio Padrão**  
+```{r Desvio - Idade, echo=FALSE}
+desv = round(sd(df$age), digits = 3)
+glue('Desvio Padrão das Idades: {desv}')
+
+```
+<br>  
+
+**Coeficiente de Variação**  
+```{r CV - Idade, echo=FALSE}
+cv = round(sd(df$age)/mean(df$age)*100, digits = 2)
+glue('Coeficiente de Variação das Idades: {cv} %')
+
+```
+<br>  
+
+
+O BoxPlot da idade ilustra bem a variabilidade dos dados.  
+<br>
+
+É visível que a distribuição das Notas x Idade, gráfico de dispersão, apresenta uma concentração maior entre os alunos de 15 a 18 anos. Isso pode ser confirmado também no histograma de Idade.  
+<br>
+
+#### BoxPlot
+````{r Gráficos BoxPlot - Idades, echo=FALSE}
+ boxplot(df_student$age, main=glue('BoxPlot - Idade'), xlab = 'Aluno', ylab ="Idade")
+```
+
+#### Histograma
+````{r Gráficos Histograma - Idades, echo=FALSE}
+hist(df$age, main=glue('Histograma - Idade'), 
+       xlab = glue('Distribuição - Idade'), ylab = 'Quant. Ocorrências',
+       breaks = c(min(df$age):max(df$age)))
+```
+
+#### Dispersão
+````{r Gráficos Dispersão - Idades, echo=FALSE}
+plot(df$age, df$G3, main=glue('Dispersão - Nota X Idade'),
+       ylab=nameDep, xlab='Idade')
+```
+<br>  
+
+
+### Reprovação {.tabset .tabset-fade}
+
+**Variância**  
+```{r Variancia - Reprovação, echo=FALSE}
+vari = round(var(df$failures), digits = 3)
+glue('Variância das Reprovações: {vari}')
+
+```
+<br>  
+
+**Desvio Padrão**  
+```{r Desvio - Reprovação, echo=FALSE}
+desv = round(sd(df$failures), digits = 3)
+glue('Desvio Padrão das Reprovações: {desv}')
+
+```
+<br>  
+
+**Coeficiente de Variação**  
+```{r CV - Reprovação, echo=FALSE}
+cv = round(sd(df$failures)/mean(df$failures)*100, digits = 2)
+glue('Coeficiente de Variação das Reprovações: {cv} %')
+
+```
+<br>  
+
+O Histograma de Reprovação mostra que a maioria dos alunos tem menos de 1 reprovação. Tanto que o BoxPlot trás valores como 1, 2 e 3 como outlier.
+<br>  
+
+
+#### BoxPlot
+````{r Gráficos BoxPlot - Reprovação, echo=FALSE}
+ boxplot(df$failures, main=glue('BoxPlot - Reprovação'), xlab = 'Aluno', ylab ="Reprovação")
+```
+
+#### Histograma
+````{r Gráficos Histograma - Reprovação, echo=FALSE}
+hist(df$failures, main=glue('Histograma - Reprovação'), 
+       xlab = glue('Distribuição - Reprovação'), ylab = 'Quant. Ocorrências',
+       breaks = c(0:4))
+```
+
+#### Dispersão
+````{r Gráficos Dispersão - Reprovação, echo=FALSE}
+plot(df$failures, df$G3, main=glue('Dispersão - Nota X Reprovação'),
+       ylab=nameDep, xlab='Reprovação')
+```
+<br>  
+
+### Faltas {.tabset .tabset-fade}
+
+**Variância**  
+```{r Variancia - Faltas, echo=FALSE}
+vari = round(var(df$absences), digits = 3)
+glue('Variância das Faltas: {vari}')
+
+```
+<br>  
+
+**Desvio Padrão**  
+```{r Desvio - Faltas, echo=FALSE}
+desv = round(sd(df$absences), digits = 3)
+glue('Desvio Padrão das Faltas: {desv}')
+
+```
+<br>  
+
+**Coeficiente de Variação**  
+```{r CV - Faltas, echo=FALSE}
+cv = round(sd(df$absences)/mean(df$absences)*100, digits = 2)
+glue('Coeficiente de Variação das Faltas: {cv} %')
+
+```
+<br>  
+
+Observando o gráfico de dispersão, podemos constatar que a maiorias dos alunos apresentam menos de 20 faltas, visto que existe uma concentração no lado esquerdo do gráfico.  
+<br>  
+
+#### BoxPlot
+````{r Gráficos BoxPlot - Faltas, echo=FALSE}
+ boxplot(df$absences, main=glue('BoxPlot - Faltas'), xlab = 'Aluno')
+```
+
+#### Histograma
+````{r Gráficos Histograma - Faltas, echo=FALSE}
+hist(df$absences, main=glue('Histograma - Faltas'), 
+       xlab = glue('Distribuição - Faltas'), ylab = 'Quant. Ocorrências',
+       breaks = "Scott")
+```
+
+#### Dispersão
+````{r Gráficos Dispersão - Faltas, echo=FALSE}
+plot(df$absences, df$G3, main=glue('Dispersão - Nota X Faltas'),
+       ylab=nameDep, xlab='Faltas')
+```
+<br>  
+
+# Correlação das Variáveis
+
+Todas a variáveis apresentam correlação negativa e no mínimo fraca. A variável independete que melhor apresentou correlação com a **Nota(G3)** foi **Reprovações(failures) -0.38 **.  
+```{r Correlacao, echo=FALSE}
+pairs.panels(df)
+```
+
+
+# Regressões Lineares - Individualizadas {.tabset .tabset-fade}
+Para termos um modelo de regressão linear, precisamos atender alguns pressupostos:  
+    1. Variâncias Homogêneas (Homocedasticidade);   
+    2. A distribuição deve ser Normal;  
+    3. Não existir Outlier Extremos.   
+<br>  
+
+Ao analisar os gráficos de *"Residuals vs Fitted"*, podemos constatar que os resíduos de todas as variáveis independetes não estão bem distribuídos, caracterizando assim heterocesticidade em todos os modelos.   
+<br>   
+Quando verificamos os gráficos de *"Normal Q-Q"* observamos que em todos os modelos tiveramos vários resíduos padronizados fora da diagonal de normalidade, o que nos leva a considerar que parte desses resíduos não apresentam uma distribuição Normal.   
+<br>
+
+E ao interpretar o gráfico de *"Resoduals vs Leverage"* podemos encontrar em todos os modelos, valores de resíduos padronizados que ultrapassam a distância de Cook caracterizando a presença de pontos influentes.
+<br>   
+
+> Assim, podemos afirmar que **o modelo de Regressão Linear não é o mais adequado para esses dados.** Mas para fins acadêmicos, iremos dar continuidade na análise do modelo de Regressão Linear Múltipla.   
+
+## Modelo Nota x Idade  
+```{r Grafico Modelo 01, echo=FALSE}
+modelo <- lm(G3 ~ age, df)
+par(mfrow=c(2,2))
+plot(modelo)
+  
+```
+
+## Modelo Nota x Reprovação  
+```{r Grafico Modelo 02, echo=FALSE}
+modelo <- lm(G3 ~ failures, df)
+par(mfrow=c(2,2))
+plot(modelo)
+  
+```  
+  
+
+## Modelo Nota x Faltas  
+```{r Grafico Modelo 03, echo=FALSE}
+modelo <- lm(G3 ~ absences, df)
+par(mfrow=c(2,2))
+plot(modelo)
+  
+```  
+
+
+# Formulação do Modelo Regressão Linear Mútipla
+Admitindo que os os modelos de regressão linear são adequados para os dados. Queremos identificar se o modelo  de regressão linear múltipla com todas as variáveis é melhor que o modelo de regressão linear da variável de maior corretação (Notas x Reprovação) com nível de significância $\alpha$ de 5%.   
+<br>
+Temos assim, as seguintes hipóteses:   
+$$h_0: MAE_a \le MAE_b$$ 
+$$h_1: MAE_a > MAE_b$$
+Onde:   
+    - $MAE_a$ é o Erro Médio Absolutos do modelo com a variável de maior correlação (*Nota x Reprovação*);   
+    - $MAE_b$ é o Erro Médio Absolutos do modelo com todas as variáveis (*Nota x Idade + Reprovação + Faltas*).   
+<br>
+  
+# Método de Monte Carlo 
+Iremos realizar o particionamento dos dados em treinamento e teste utilizando o método de Hold Out. Consideraremos que a amostra de treino terá $\frac{2}{3}$ do tamanho do nossos dados e logo o teste terá $\frac{1}{3}$ do tamanho. E iremos realizar as iterações na ordem de $\frac{1}{3}$ do tamanho dos nossos dados.
+
+````{r Monte Carlo}
+ErrorAbs_All = ErrorAbs_Fail = c(0)
+
+MC = round(dim(df)[1]/3, 0)
+
+for(i in 1:MC){
+  
+  ind= createDataPartition(df$G3, p=2/3, list=FALSE)
+  
+  train.data <- df[ind,]
+  test.data <- df[-ind,]
+  
+  reg_All <- lm(G3 ~ age + absences + failures, train.data)
+  reg_Fail <- lm(G3 ~ failures, train.data)
+  
+  pred_All <-predict(reg_All, test.data)
+  pred_Fail <- predict(reg_Fail, test.data)
+  
+  ErrorAbs_All[i] <- MAE(pred_All, test.data$G3)
+  ErrorAbs_Fail[i] <- MAE(pred_Fail, test.data$G3)
+  }
+```
+
+
+# Resultados 
+Após realizar o cálculo do Erro Médio Absoludo (*MAE*) para os modelos, N vezes (de acordo com o número de iterações realizadas no modelo de Monte Carlo - Método Hold Out) chegamos aos seguintes resultados:   
+<br>   
+
+## Teste de Normalidade {.tabset .tabset-fade}
+### Histogramas   
+```{r Histograma Comparacao, echo=FALSE}
+
+par(mfrow=c(2,1))
+hist(ErrorAbs_All, main="Todas as Variáveis")
+hist(ErrorAbs_Fail, main="Reprovação")
+```
+
+### Shapiro Test   
+```{r Shapiro, echo =FALSE}
+  shap_One <- shapiro.test(ErrorAbs_All)
+  glue("Valor de p no Shapiro Test para Todas as Variáveis  - {round(shap_One$p.value, 3)}")
+  shap_Two <- shapiro.test(ErrorAbs_Fail)
+  glue("Valor de p no Shapiro Test para Reprovação - {round(shap_Two$p.value, 3)}")
+```
+Como os P-Values de ambos modelos foram superiores a 0.05, podemos admitir que **os resíduos apresentam uma distribuição normal**. Reforçando o que haviamos constatado no histogramas.   
+
+Assim, devesse utilizar **Testes de Hipóteses Paramétricos** como o **Student T Test**.   
+
+## Student T Test
+
+Quanto menor for o P-Value melhor para rejeitar $h_0$.   
+
+```{r Student T Test, echo=FALSE}
+Hipo_Test <- t.test(ErrorAbs_All, ErrorAbs_Fail, alternative = c("greater"))
+
+glue("P-Value = {round(Hipo_Test$p.value, digits = 3)}")
+glue("t = {round(Hipo_Test$statistic, digits = 3)}")
+glue("df = {round(Hipo_Test$parameter, digits = 3)}")
+```
+
+<br>
+<br>  
+
+>Dado que o P-Value (`r round(Hipo_Test$p.value, digits = 3)*100`%) foi superior ao nível de significância ($\alpha = 5\%$) determinado a priori. Não podemos rejitar a hipótese nula e consequentemente não podemos afirmar nada a respeito da hipótese alternativa.   
+
+
+<br>
+<br>  
